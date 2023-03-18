@@ -1,3 +1,6 @@
 [submodule "lib/SparkFun_ICM-20948_ArduinoLibrary"]
 	path = lib/SparkFun_ICM-20948_ArduinoLibrary
-	url = https://github.com/sparkfun/SparkFun_ICM-20948_ArduinoLibrary
+	url = https://github.com/teknoman117/SparkFun_ICM-20948_ArduinoLibrary
+[submodule "lib/ArduinoCore-API"]
+	path = lib/ArduinoCore-API
+	url = https://github.com/arduino/ArduinoCore-API
