@@ -4,10 +4,46 @@
 
 #include "ICM_20948.h"
 
+// "F" macro interferes with asio
+#undef F
+#include <asio/io_context.hpp>
+#include <asio/steady_timer.hpp>
+
 #include <chrono>
 #include <thread>
 
+asio::io_context io;
+asio::steady_timer imuTimer(io);
+
 ICM_20948_I2C imu;
+
+// Process all pending IMU events
+void handleIMUTimer(asio::error_code ec) {
+    icm_20948_DMP_data_t data;
+    imu.readDMPdataFromFIFO(&data);
+    while ((imu.status == ICM_20948_Stat_Ok)
+            || (imu.status == ICM_20948_Stat_FIFOMoreDataAvail)) {
+        if (data.header & DMP_header_bitmap_Quat9) {
+            // Convert fixed point to floating point (divide by 2^30)
+            double q1 = (double) data.Quat9.Data.Q1 / 1073741824.0;
+            double q2 = (double) data.Quat9.Data.Q2 / 1073741824.0;
+            double q3 = (double) data.Quat9.Data.Q3 / 1073741824.0;
+            double q0 = sqrt(1.0 - ((q1 * q1) + (q2 * q2) + (q3 * q3)));
+
+            printf("{\"orientation\": {\"w\":%.3lf, \"x\":%.3lf, \"y\":%.3lf,"
+                " \"z\":%.3lf}, \"accuracy\":%u}\n",
+                q0, q1, q2, q3, data.Quat9.Data.Accuracy);
+        }
+
+        imu.readDMPdataFromFIFO(&data);
+    }
+
+    // Schedule next IMU update
+    // TODO: is there a way to avoid polling the sensor?
+    // DMP updates at 55 Hz (~18.2 ms), what is a sensible polling rate?
+    imuTimer.expires_at(imuTimer.expires_at() + std::chrono::milliseconds(10));
+    imuTimer.async_wait(handleIMUTimer);
+}
 
 void setup() {
     // Initialize the IMU
@@ -53,29 +89,15 @@ void setup() {
         fprintf(stderr, "ICM_20948::resetFIFO(...) Failed\n");
         exit(EXIT_FAILURE);
     }
+
+    // Schedule IMU Update
+    imuTimer.expires_at(asio::steady_timer::clock_type::now());
+    imuTimer.async_wait(handleIMUTimer);
 }
 
 void loop() {
-    icm_20948_DMP_data_t data;
-    imu.readDMPdataFromFIFO(&data);
-
-    if ((imu.status == ICM_20948_Stat_Ok)
-            || (imu.status == ICM_20948_Stat_FIFOMoreDataAvail)) {
-        if (data.header & DMP_header_bitmap_Quat9) {
-            // Convert fixed point to floating point (divide by 2^30)
-            double q1 = (double) data.Quat9.Data.Q1 / 1073741824.0;
-            double q2 = (double) data.Quat9.Data.Q2 / 1073741824.0;
-            double q3 = (double) data.Quat9.Data.Q3 / 1073741824.0;
-            double q0 = sqrt(1.0 - ((q1 * q1) + (q2 * q2) + (q3 * q3)));
-
-            printf("{\"orientation\": {\"w\":%.3lf, \"x\":%.3lf, \"y\":%.3lf,"
-                " \"z\":%.3lf}, \"accuracy\":%u}\n",
-                q0, q1, q2, q3, data.Quat9.Data.Accuracy);
-        }
-    } else {
-        // TODO: is there a way to avoid polling the sensor?
-        // DMP updates at 55 Hz (~18.2 ms), what is a sensible polling rate?
-        auto delay = std::chrono::milliseconds(10);
-        std::this_thread::sleep_for(delay);
+    auto n = io.run_one();
+    if (!n) {
+        exit(EXIT_SUCCESS);
     }
 }
