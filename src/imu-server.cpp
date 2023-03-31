@@ -7,18 +7,25 @@
 // "F" macro interferes with asio
 #undef F
 #include <asio/io_context.hpp>
+#include <asio/signal_set.hpp>
 #include <asio/steady_timer.hpp>
 
 #include <chrono>
 #include <thread>
 
+extern "C" {
+    #include <sys/signal.h>
+}
+
 asio::io_context io;
 asio::steady_timer imuTimer(io);
+asio::signal_set signalReload(io, SIGHUP);
+asio::signal_set signalTerminate(io, SIGTERM);
 
 ICM_20948_I2C imu;
 
 // Process all pending IMU events
-void handleIMUTimer(asio::error_code ec) {
+void handleIMUTimer(const asio::error_code& ec) {
     icm_20948_DMP_data_t data;
     imu.readDMPdataFromFIFO(&data);
     while ((imu.status == ICM_20948_Stat_Ok)
@@ -43,6 +50,17 @@ void handleIMUTimer(asio::error_code ec) {
     // DMP updates at 55 Hz (~18.2 ms), what is a sensible polling rate?
     imuTimer.expires_at(imuTimer.expires_at() + std::chrono::milliseconds(10));
     imuTimer.async_wait(handleIMUTimer);
+}
+
+void handleSignalReload(const asio::error_code& ec, int signo) {
+    // TODO: implement a way to change which i2c address and/or bus we use
+    printf("<1> Reloading Configuration\n");
+    signalReload.async_wait(handleSignalReload);
+}
+
+void handleSignalTerminate(const asio::error_code& ec, int signo) {
+    printf("<1> Shutdown Requested\n");
+    io.stop();
 }
 
 void setup() {
@@ -89,6 +107,12 @@ void setup() {
         fprintf(stderr, "ICM_20948::resetFIFO(...) Failed\n");
         exit(EXIT_FAILURE);
     }
+
+    // Listen to SIGHUP to reload configuration
+    signalReload.async_wait(handleSignalReload);
+
+    // Listen to SIGTERM to terminate the process
+    signalTerminate.async_wait(handleSignalTerminate);
 
     // Schedule IMU Update
     imuTimer.expires_at(asio::steady_timer::clock_type::now());
