@@ -1,14 +1,14 @@
 [Unit]
 Description=ICM-20948 IMU Daemon
-Requires=imu-server.socket
+#Requires=imu-server.socket
 After=network.target
 
 [Service]
 Type=simple
 ExecStart=@CMAKE_INSTALL_FULL_SBINDIR@/imu-server
-Restart=Always
+Restart=always
 RestartSec=1
 
 [Install]
 WantedBy=multi-user.target
-Also=imu-server.socket
+#Also=imu-server.socket

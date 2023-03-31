@@ -23,4 +23,6 @@ configure_file(
 
 set(SYSTEMD_UNIT_DIR "lib/systemd/system")
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/imu-server.service" DESTINATION "${SYSTEMD_UNIT_DIR}")
-install(FILES "${PROJECT_SOURCE_DIR}/systemd/imu-server.socket" DESTINATION "${SYSTEMD_UNIT_DIR}")
+
+# TODO: support systemd socket handover
+#install(FILES "${PROJECT_SOURCE_DIR}/systemd/imu-server.socket" DESTINATION "${SYSTEMD_UNIT_DIR}")
