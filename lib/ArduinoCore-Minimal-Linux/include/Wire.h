@@ -18,8 +18,6 @@ class TwoWire : public arduino::HardwareI2C {
     std::vector<uint8_t> transmitBuffer;
     std::vector<uint8_t> receiveBuffer;
 
-    
-
 public:
     // arduino::HardwareI2C Functions
     void begin() override;
@@ -51,6 +49,7 @@ public:
 
 public:
     TwoWire();
+    ~TwoWire();
 };
 
 extern TwoWire Wire;

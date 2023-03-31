@@ -18,6 +18,12 @@ TwoWire::TwoWire()
     /* empty */
 }
 
+TwoWire::~TwoWire() {
+    if (fd >= 0) {
+        close(fd);
+    }
+}
+
 // arduino::HardwareI2C Functions
 void TwoWire::begin() {
     fd = open("/dev/i2c-1", O_RDWR);
