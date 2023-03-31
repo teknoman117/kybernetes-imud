@@ -21,18 +21,20 @@ extern "C" {
     #include <sys/signal.h>
 }
 
-struct UnixSocketPathWrangler {
+class UnixSocketPathWrangler {
     const char* xdgRuntimeDir;
-    std::string path;
-
-    UnixSocketPathWrangler() {
-        xdgRuntimeDir = std::getenv("XDG_RUNTIME_DIR");
-        path = xdgRuntimeDir != nullptr
+    std::string path_;
+public:
+    UnixSocketPathWrangler() : xdgRuntimeDir(std::getenv("XDG_RUNTIME_DIR")) {
+        path_ = xdgRuntimeDir != nullptr
             ? std::string(xdgRuntimeDir) + "/imu.sock"
-            : "/run/imu.sock";
+            : "/run/imu-server/imu.sock";
     }
     ~UnixSocketPathWrangler() {
-        std::remove(path.c_str());
+        std::remove(path_.c_str());
+    }
+    const char* path() const {
+        return path_.c_str();
     }
 } wrangler;
 
@@ -41,10 +43,10 @@ asio::steady_timer imuTimer(io);
 asio::signal_set signalReload(io, SIGHUP);
 asio::signal_set signalTerminate(io, SIGTERM, SIGINT);
 
-asio::ip::tcp::acceptor acceptorTCPIPv4(io, {asio::ip::tcp::v4(), 4000}, true);
-std::vector<asio::ip::tcp::socket> clientsTCPIPv4 = {};
+asio::ip::tcp::acceptor acceptorTCP(io, {asio::ip::tcp::v6(), 4000}, true);
+std::vector<asio::ip::tcp::socket> clientsTCP = {};
 
-asio::local::stream_protocol::acceptor acceptorUNIX(io, {wrangler.path}, true);
+asio::local::stream_protocol::acceptor acceptorUNIX(io, {wrangler.path()}, true);
 std::vector<asio::local::stream_protocol::socket> clientsUNIX = {};
 
 ICM_20948_I2C imu;
@@ -81,20 +83,20 @@ void handleIMUTimer(const asio::error_code& ec) {
                 heading, data.Quat9.Data.Accuracy);
 
             // Send message to IPv4 clients
-            for (auto client = clientsTCPIPv4.begin(); client != clientsTCPIPv4.end(); client++) {
-                client->async_write_some(asio::const_buffer(message.data(), n + 1),
+            for (auto client = clientsTCP.begin(); client != clientsTCP.end(); client++) {
+                client->async_write_some(asio::const_buffer(message.data(), n),
                         [client] (const asio::error_code& ec, size_t) {
                     // boot the client upon any error
                     if (ec) {
-                        printf("<5> Client disconnected (TCPIPv4)\n");
-                        clientsTCPIPv4.erase(client);
+                        printf("<5> Client disconnected (TCP)\n");
+                        clientsTCP.erase(client);
                     }
                 });
             }
 
             // Send message to UNIX clients
             for (auto client = clientsUNIX.begin(); client != clientsUNIX.end(); client++) {
-                client->async_write_some(asio::const_buffer(message.data(), n + 1),
+                client->async_write_some(asio::const_buffer(message.data(), n),
                         [client] (const asio::error_code& ec, size_t) {
                     // boot the client upon any error
                     if (ec) {
@@ -125,7 +127,7 @@ void handleSignalTerminate(const asio::error_code& ec, int signo) {
     io.stop();
 }
 
-void handleTCPIPv4Accept(const asio::error_code& ec, asio::ip::tcp::socket socket) {
+void handleTCPAccept(const asio::error_code& ec, asio::ip::tcp::socket socket) {
     if (ec) {
         return;
     }
@@ -134,8 +136,8 @@ void handleTCPIPv4Accept(const asio::error_code& ec, asio::ip::tcp::socket socke
             socket.remote_endpoint().address().to_string().data(),
             socket.remote_endpoint().port());
 
-    clientsTCPIPv4.emplace_back(std::move(socket));
-    acceptorTCPIPv4.async_accept(handleTCPIPv4Accept);
+    clientsTCP.emplace_back(std::move(socket));
+    acceptorTCP.async_accept(handleTCPAccept);
 }
 
 void handleUNIXAccept(const asio::error_code& ec, asio::local::stream_protocol::socket socket) {
@@ -200,7 +202,7 @@ void setup() {
     signalTerminate.async_wait(handleSignalTerminate);
 
     // Listen for network clients
-    acceptorTCPIPv4.async_accept(handleTCPIPv4Accept);
+    acceptorTCP.async_accept(handleTCPAccept);
     acceptorUNIX.async_accept(handleUNIXAccept);
 
     // Schedule IMU Update

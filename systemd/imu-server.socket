@@ -3,10 +3,9 @@ Description=ICM-20948 IMU Daemon Sockets
 
 [Socket]
 ListenStream=/run/imu.sock
-#ListenStream=[::]:4000
-ListenStream=0.0.0.0:4000
-#SocketMode=0600
-#BindIPv6Only=yes
+ListenStream=[::]:4000
+SocketMode=0660
+BindIPv6Only=no
 
 [Install]
 WantedBy=sockets.target
