@@ -37,7 +37,7 @@ void handleIMUTimer(const asio::error_code& ec) {
             double q3 = (double) data.Quat9.Data.Q3 / 1073741824.0;
             double q0 = sqrt(1.0 - ((q1 * q1) + (q2 * q2) + (q3 * q3)));
 
-            printf("{\"orientation\": {\"w\":%.3lf, \"x\":%.3lf, \"y\":%.3lf,"
+            printf("<6> {\"orientation\": {\"w\":%.3lf, \"x\":%.3lf, \"y\":%.3lf,"
                 " \"z\":%.3lf}, \"accuracy\":%u}\n",
                 q0, q1, q2, q3, data.Quat9.Data.Accuracy);
         }
@@ -54,12 +54,12 @@ void handleIMUTimer(const asio::error_code& ec) {
 
 void handleSignalReload(const asio::error_code& ec, int signo) {
     // TODO: implement a way to change which i2c address and/or bus we use
-    printf("<1> Reloading Configuration\n");
+    printf("<5> Reloading Configuration\n");
     signalReload.async_wait(handleSignalReload);
 }
 
 void handleSignalTerminate(const asio::error_code& ec, int signo) {
-    printf("<1> Shutdown Requested\n");
+    printf("<5> Shutdown Requested\n");
     io.stop();
 }
 

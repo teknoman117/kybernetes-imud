@@ -11,3 +11,16 @@ target_link_libraries(imu-server
         Threads::Threads
         sparkfun-icm-20948
 )
+
+# Install the daemon
+install(TARGETS imu-server RUNTIME DESTINATION ${CMAKE_INSTALL_SBINDIR})
+
+# Install systemd units
+configure_file(
+    "${PROJECT_SOURCE_DIR}/systemd/imu-server.service"
+    "${CMAKE_CURRENT_BINARY_DIR}/imu-server.service"
+)
+
+set(SYSTEMD_UNIT_DIR "lib/systemd/system")
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/imu-server.service" DESTINATION "${SYSTEMD_UNIT_DIR}")
+install(FILES "${PROJECT_SOURCE_DIR}/systemd/imu-server.socket" DESTINATION "${SYSTEMD_UNIT_DIR}")
