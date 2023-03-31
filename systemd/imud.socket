@@ -2,10 +2,13 @@
 Description=IMU Daemon Sockets
 
 [Socket]
-ListenStream=/run/imu.sock
 ListenStream=[::]:4000
-SocketMode=0660
 BindIPv6Only=no
+
+ListenStream=/run/imud/imu.sock
+SocketMode=0660
+SocketUser=imud
+SocketGroup=imud
 
 [Install]
 WantedBy=sockets.target

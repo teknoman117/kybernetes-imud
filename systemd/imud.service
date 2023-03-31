@@ -5,6 +5,8 @@ After=network.target
 
 [Service]
 Type=simple
+User=imud
+RuntimeDirectory=imud
 ExecStart=@CMAKE_INSTALL_FULL_SBINDIR@/imud
 Restart=always
 RestartSec=5

@@ -23,13 +23,18 @@ extern "C" {
 }
 
 class UnixSocketPathWrangler {
-    const char* xdgRuntimeDir;
     std::string path_;
 public:
-    UnixSocketPathWrangler() : xdgRuntimeDir(std::getenv("XDG_RUNTIME_DIR")) {
-        path_ = xdgRuntimeDir != nullptr
-            ? std::string(xdgRuntimeDir) + "/imu.sock"
-            : "/run/imud/imu.sock";
+    UnixSocketPathWrangler() {
+        const char* runtimeDirectory = std::getenv("RUNTIME_DIRECTORY");
+        const char* xdgRuntimeDirectory = std::getenv("XDG_RUNTIME_DIR");
+        if (runtimeDirectory) {
+            path_ = std::string(runtimeDirectory) + "/imu.sock";
+        } else if (xdgRuntimeDirectory) {
+            path_ = std::string(xdgRuntimeDirectory) + "/imu.sock";
+        } else {
+            path_ = "imu.sock";
+        }
     }
     ~UnixSocketPathWrangler() {
         std::remove(path_.c_str());
@@ -205,6 +210,10 @@ void setup() {
     // Listen for network clients
     acceptorTCP.async_accept(handleTCPAccept);
     acceptorUNIX.async_accept(handleUNIXAccept);
+
+    // Change unix socket's mode (0660)
+    // TODO: is this really the best way of doing this?
+    chmod(wrangler.path(), S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP);
 
     // Schedule IMU Update
     imuTimer.expires_at(asio::steady_timer::clock_type::now());
