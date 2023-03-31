@@ -18,6 +18,7 @@
 #include <cstdio>
 
 extern "C" {
+    #include <systemd/sd-daemon.h>
     #include <sys/signal.h>
 }
 
@@ -28,7 +29,7 @@ public:
     UnixSocketPathWrangler() : xdgRuntimeDir(std::getenv("XDG_RUNTIME_DIR")) {
         path_ = xdgRuntimeDir != nullptr
             ? std::string(xdgRuntimeDir) + "/imu.sock"
-            : "/run/imu-server/imu.sock";
+            : "/run/imud/imu.sock";
     }
     ~UnixSocketPathWrangler() {
         std::remove(path_.c_str());
@@ -88,7 +89,7 @@ void handleIMUTimer(const asio::error_code& ec) {
                         [client] (const asio::error_code& ec, size_t) {
                     // boot the client upon any error
                     if (ec) {
-                        printf("<5> Client disconnected (TCP)\n");
+                        printf(SD_NOTICE "Client disconnected (TCP)\n");
                         clientsTCP.erase(client);
                     }
                 });
@@ -100,7 +101,7 @@ void handleIMUTimer(const asio::error_code& ec) {
                         [client] (const asio::error_code& ec, size_t) {
                     // boot the client upon any error
                     if (ec) {
-                        printf("<5> Client disconnected (UNIX)\n");
+                        printf(SD_NOTICE "Client disconnected (UNIX)\n");
                         clientsUNIX.erase(client);
                     }
                 });
@@ -118,12 +119,12 @@ void handleIMUTimer(const asio::error_code& ec) {
 
 void handleSignalReload(const asio::error_code& ec, int signo) {
     // TODO: implement a way to change which i2c address and/or bus we use
-    printf("<5> Reloading Configuration\n");
+    printf(SD_NOTICE "Reloading Configuration\n");
     signalReload.async_wait(handleSignalReload);
 }
 
 void handleSignalTerminate(const asio::error_code& ec, int signo) {
-    printf("<5> Shutdown Requested\n");
+    printf(SD_NOTICE "Shutdown Requested\n");
     io.stop();
 }
 
@@ -132,7 +133,7 @@ void handleTCPAccept(const asio::error_code& ec, asio::ip::tcp::socket socket) {
         return;
     }
 
-    printf("<5> Client connected (TCP): %s:%u\n",
+    printf(SD_NOTICE "Client connected (TCP): %s:%u\n",
             socket.remote_endpoint().address().to_string().data(),
             socket.remote_endpoint().port());
 
@@ -145,7 +146,7 @@ void handleUNIXAccept(const asio::error_code& ec, asio::local::stream_protocol::
         return;
     }
 
-    printf("<5> Client connected (UNIX)\n");
+    printf(SD_NOTICE "Client connected (UNIX)\n");
     clientsUNIX.emplace_back(std::move(socket));
     acceptorUNIX.async_accept(handleUNIXAccept);
 }
@@ -155,43 +156,43 @@ void setup() {
     Wire.begin();
     imu.begin(Wire, 1);
     if (imu.status != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "IMU Initialization Failed\n");
+        printf(SD_ERR "IMU Initialization Failed\n");
         exit(EXIT_FAILURE);
     }
 
     // Initialize the DMP
     if (imu.initializeDMP() != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::initializeDMP(...) Failed\n");
+        printf(SD_ERR "ICM_20948::initializeDMP(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.enableDMPSensor(INV_ICM20948_SENSOR_ORIENTATION) != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::enableDMPSensor(...) Failed\n");
+        printf(SD_ERR "ICM_20948::enableDMPSensor(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.setDMPODRrate(DMP_ODR_Reg_Quat9, 0) != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::setDMPODRrate(...) Failed\n");
+        printf(SD_ERR "ICM_20948::setDMPODRrate(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.enableFIFO() != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::enableFIFO() Failed\n");
+        printf(SD_ERR "ICM_20948::enableFIFO() Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.enableDMP() != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::enableDMP() Failed\n");
+        printf(SD_ERR "ICM_20948::enableDMP() Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.resetDMP() != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::resetDMP(...) Failed\n");
+        printf(SD_ERR "ICM_20948::resetDMP(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 
     if (imu.resetFIFO() != ICM_20948_Stat_Ok) {
-        fprintf(stderr, "ICM_20948::resetFIFO(...) Failed\n");
+        printf(SD_ERR "ICM_20948::resetFIFO(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 

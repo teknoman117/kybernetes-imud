@@ -1,5 +1,5 @@
 [Unit]
-Description=ICM-20948 IMU Daemon Sockets
+Description=IMU Daemon Sockets
 
 [Socket]
 ListenStream=/run/imu.sock

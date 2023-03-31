@@ -1,0 +1,14 @@
+[Unit]
+Description=IMU Daemon
+#Requires=imud.socket
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=@CMAKE_INSTALL_FULL_SBINDIR@/imud
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+#Also=imud.socket
