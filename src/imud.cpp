@@ -82,7 +82,7 @@ void handleIMUTimer(const asio::error_code& ec) {
             std::array<char, 256> message;
             int n = snprintf(message.data(), message.size(),
                 "{\"orientation\": {\"w\":%.9lf, \"x\":%.9lf, \"y\":%.9lf, \"z\":%.9lf}, "
-                "\"orientation_raw\": {\"x\":%u, \"y\":%u, \"z\":%u}, "
+                "\"orientation_raw\": {\"x\":%d, \"y\":%d, \"z\":%d}, "
                 "\"heading\":%.9lf, \"accuracy\":%u}\n",
                 q0, q1, q2, q3,
                 data.Quat9.Data.Q1, data.Quat9.Data.Q2, data.Quat9.Data.Q3,
