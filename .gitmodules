@@ -4,3 +4,6 @@
 [submodule "lib/ArduinoCore-API"]
 	path = lib/ArduinoCore-API
 	url = https://github.com/arduino/ArduinoCore-API
+[submodule "lib/ICM_20948-AHRS"]
+	path = lib/ICM_20948-AHRS
+	url = https://github.com/teknoman117/ICM_20948-AHRS
