@@ -24,6 +24,10 @@ public:
     int available() override;
     int read() override;
     int peek() override;
+
+    constexpr bool operator!() {
+        return false;
+    }
 };
 
 extern HostConsole Serial;

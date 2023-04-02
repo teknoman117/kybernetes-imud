@@ -11,7 +11,6 @@ add_library(arduino-core STATIC
 
     "${CMAKE_CURRENT_LIST_DIR}/ArduinoCore-API/test/src/dtostrf.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/ArduinoCore-API/test/src/itoa.cpp"
-    "${CMAKE_CURRENT_LIST_DIR}/ArduinoCore-API/test/src/MillisFake.cpp"
 )
 
 target_include_directories(arduino-core

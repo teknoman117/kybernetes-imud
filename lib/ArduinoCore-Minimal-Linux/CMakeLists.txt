@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 add_library(arduino-core-linux STATIC
     "${CMAKE_CURRENT_LIST_DIR}/src/Arduino.cpp"
     "${CMAKE_CURRENT_LIST_DIR}/src/Wire.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/Common.cpp"
 )
 
 target_include_directories(arduino-core-linux
