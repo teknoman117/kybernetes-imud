@@ -64,11 +64,11 @@ void handleIMUTimer(const asio::error_code& ec) {
     imu.readDMPdataFromFIFO(&data);
     if ((imu.status == ICM_20948_Stat_Ok)
             || (imu.status == ICM_20948_Stat_FIFOMoreDataAvail)) {
-        if (data.header & DMP_header_bitmap_Quat9) {
+        if (data.header & DMP_header_bitmap_Quat6) {
             // Convert fixed point to floating point (divide by 2^30)
-            double q1 = (double) data.Quat9.Data.Q1 / 1073741824.0;
-            double q2 = (double) data.Quat9.Data.Q2 / 1073741824.0;
-            double q3 = (double) data.Quat9.Data.Q3 / 1073741824.0;
+            double q1 = (double) data.Quat6.Data.Q1 / 1073741824.0;
+            double q2 = (double) data.Quat6.Data.Q2 / 1073741824.0;
+            double q3 = (double) data.Quat6.Data.Q3 / 1073741824.0;
             double q0 = sqrt(1.0 - ((q1 * q1) + (q2 * q2) + (q3 * q3)));
 
             // Compute magnetic heading
@@ -85,8 +85,8 @@ void handleIMUTimer(const asio::error_code& ec) {
                 "\"orientation_raw\": {\"x\":%d, \"y\":%d, \"z\":%d}, "
                 "\"heading\":%.9lf, \"accuracy\":%u}\n",
                 q0, q1, q2, q3,
-                data.Quat9.Data.Q1, data.Quat9.Data.Q2, data.Quat9.Data.Q3,
-                heading, data.Quat9.Data.Accuracy);
+                data.Quat6.Data.Q1, data.Quat6.Data.Q2, data.Quat6.Data.Q3,
+                heading, 0);
 
             // Send message to IPv4 clients
             for (auto client = clientsTCP.begin(); client != clientsTCP.end(); client++) {
@@ -125,6 +125,9 @@ void handleIMUTimer(const asio::error_code& ec) {
 void handleSignalReload(const asio::error_code& ec, int signo) {
     // TODO: implement a way to change which i2c address and/or bus we use
     printf(SD_NOTICE "Reloading Configuration\n");
+
+    // TODO: use this signal to consider the current orientation as "zero" (north-facing)
+
     signalReload.async_wait(handleSignalReload);
 }
 
@@ -171,12 +174,12 @@ void setup() {
         exit(EXIT_FAILURE);
     }
 
-    if (imu.enableDMPSensor(INV_ICM20948_SENSOR_ORIENTATION) != ICM_20948_Stat_Ok) {
+    if (imu.enableDMPSensor(INV_ICM20948_SENSOR_GAME_ROTATION_VECTOR) != ICM_20948_Stat_Ok) {
         printf(SD_ERR "ICM_20948::enableDMPSensor(...) Failed\n");
         exit(EXIT_FAILURE);
     }
 
-    if (imu.setDMPODRrate(DMP_ODR_Reg_Quat9, 0) != ICM_20948_Stat_Ok) {
+    if (imu.setDMPODRrate(DMP_ODR_Reg_Quat6, 0) != ICM_20948_Stat_Ok) {
         printf(SD_ERR "ICM_20948::setDMPODRrate(...) Failed\n");
         exit(EXIT_FAILURE);
     }
